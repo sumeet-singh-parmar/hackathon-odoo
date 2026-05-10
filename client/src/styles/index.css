@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 255 255 255;
+  --color-surface: 250 250 250;
+  --color-text: 17 17 17;
+  --color-muted: 110 110 110;
+  --color-primary: 79 70 229;
+  --color-primary-fg: 255 255 255;
+  --color-border: 230 230 230;
+  --radius: 0.5rem;
+}
+
+body {
+  @apply bg-bg text-text;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
