@@ -6,5 +6,15 @@
     "client",
     "server",
     "shared"
-  ]
+  ],
+  "scripts": {
+    "dev": "docker compose up -d --wait && concurrently -n server,client -c blue,magenta --kill-others-on-fail \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "stop": "docker compose down",
+    "typecheck": "npm --workspace server run typecheck && npm --workspace client run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
 }

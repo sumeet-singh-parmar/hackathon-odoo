@@ -7,11 +7,236 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TripStatus {
+  DRAFT
+  PLANNED
+  ONGOING
+  COMPLETED
+}
+
+enum ActivityType {
+  SIGHTSEEING
+  FOOD
+  ADVENTURE
+  NIGHTLIFE
+  CULTURE
+  NATURE
+}
+
+enum ExpenseCategory {
+  TRANSPORT
+  STAY
+  ACTIVITIES
+  MEALS
+}
+
+enum PackingCategory {
+  CLOTHING
+  DOCUMENTS
+  ELECTRONICS
+  OTHER
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  username       String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  phoneNumber    String
+  city           String
+  country        String
+  additionalInfo String?
+  role           UserRole  @default(USER)
+  language       String?
+  avatarUrl      String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  refreshTokens     RefreshToken[]
+  passwordResets    PasswordReset[]
+  trips             Trip[]
+  savedDestinations SavedDestination[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Trip {
+  id            Int        @id @default(autoincrement())
+  ownerId       Int
+  name          String
+  description   String?
+  startDate     DateTime   @db.Date
+  endDate       DateTime   @db.Date
+  coverPhotoUrl String?
+  isPublic      Boolean    @default(false)
+  shareSlug     String?    @unique
+  status        TripStatus @default(DRAFT)
+  currency      String     @default("USD")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  stops        Stop[]
+  expenses     Expense[]
+  packingItems PackingItem[]
+  notes        TripNote[]
+
+  @@index([ownerId])
+}
+
+model Stop {
+  id         Int      @id @default(autoincrement())
+  tripId     Int
+  cityId     Int
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  orderIndex Int
+  createdAt  DateTime @default(now())
+
+  trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city       City           @relation(fields: [cityId], references: [id])
+  activities TripActivity[]
+  notes      TripNote[]
+
+  @@unique([tripId, orderIndex])
+  @@index([cityId])
+}
+
+model City {
+  id          Int      @id @default(autoincrement())
+  name        String
+  country     String
+  costIndex   Float
+  popularity  Int      @default(0)
+  region      String?
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  stops             Stop[]
+  activities        Activity[]
+  savedDestinations SavedDestination[]
+
+  @@index([country])
+  @@index([popularity])
+}
+
+model Activity {
+  id            Int          @id @default(autoincrement())
+  cityId        Int
+  name          String
+  type          ActivityType
+  baseCost      Float
+  durationHours Float
+  description   String?
+  createdAt     DateTime     @default(now())
+
+  city           City           @relation(fields: [cityId], references: [id])
+  tripActivities TripActivity[]
+
+  @@index([cityId])
+  @@index([type])
+}
+
+model TripActivity {
+  id            Int       @id @default(autoincrement())
+  stopId        Int
+  activityId    Int
+  scheduledTime DateTime?
+  customCost    Float?
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  stop     Stop     @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id])
+
+  @@index([stopId])
+  @@index([activityId])
+}
+
+model Expense {
+  id        Int             @id @default(autoincrement())
+  tripId    Int
+  category  ExpenseCategory
+  amount    Float
+  day       DateTime?       @db.Date
+  note      String?
+  isAuto    Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model PackingItem {
+  id        Int             @id @default(autoincrement())
+  tripId    Int
   name      String
+  category  PackingCategory
+  isPacked  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model TripNote {
+  id        Int      @id @default(autoincrement())
+  tripId    Int
+  stopId    Int?
+  text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  trip Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stop Stop? @relation(fields: [stopId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model SavedDestination {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  cityId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City @relation(fields: [cityId], references: [id])
+
+  @@unique([userId, cityId])
 }
